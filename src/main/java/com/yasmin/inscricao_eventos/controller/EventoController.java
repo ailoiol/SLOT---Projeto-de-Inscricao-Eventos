@@ -8,6 +8,7 @@ import com.yasmin.inscricao_eventos.model.Usuario;
 import com.yasmin.inscricao_eventos.repository.EventoRepository;
 import com.yasmin.inscricao_eventos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +32,7 @@ public class EventoController {
     }
 
     @PostMapping
-    public EventoResponseDTO criar(@RequestBody Evento evento) {
+    public EventoResponseDTO criar(@Valid @RequestBody Evento evento) {
         Usuario organizador = usuarioRepository.findById(evento.getOrganizador().getId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Organizador não encontrado"));
 
@@ -45,7 +46,7 @@ public class EventoController {
     }
 
     @PutMapping("/{id}")
-    public EventoResponseDTO atualizar(@PathVariable Integer id, @RequestBody Evento dadosAtualizados) {
+    public EventoResponseDTO atualizar(@PathVariable Integer id, @Valid @RequestBody Evento dadosAtualizados) {
         Evento evento = eventoRepository.findById(id)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Evento com id " + id + " não encontrado"));
 

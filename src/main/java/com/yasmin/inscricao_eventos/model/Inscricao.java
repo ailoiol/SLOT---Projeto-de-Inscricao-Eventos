@@ -2,6 +2,7 @@ package com.yasmin.inscricao_eventos.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "inscricao")
@@ -23,9 +24,11 @@ public class Inscricao {
     private String status;
 
     @Column(name = "nome_participante")
+    @NotBlank(message = "Nome do participante é obrigatório")
     private String nomeParticipante;
 
     @Column(name = "cpf_participante")
+    @NotBlank(message = "CPF do participante é obrigatório")
     private String cpfParticipante;
 
     @Column(name = "telefone_participante")

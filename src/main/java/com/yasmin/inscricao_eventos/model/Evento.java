@@ -2,6 +2,9 @@ package com.yasmin.inscricao_eventos.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 @Entity 
 @Table(name = "evento")
@@ -15,15 +18,19 @@ public class Evento {
     @JoinColumn(name = "organizador_id")
     private Usuario organizador;
 
+    @NotBlank(message = "Título é obrigatório")
     @Column(name = "titulo")
     private String titulo;
 
     @Column(name = "descricao")
     private String descricao;
 
+    @NotNull(message = "Data do evento é obrigatória")
     @Column(name = "data_evento")
     private LocalDateTime dataEvento;
 
+    @NotNull(message = "Vagas totais é obrigatório")
+    @Positive(message = "Vagas totais deve ser maior que zero")
     @Column(name = "vagas_totais")
     private Integer vagasTotais;
 

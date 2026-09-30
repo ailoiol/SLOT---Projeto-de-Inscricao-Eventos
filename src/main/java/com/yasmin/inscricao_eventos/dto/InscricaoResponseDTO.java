@@ -3,6 +3,7 @@ package com.yasmin.inscricao_eventos.dto;
 import com.yasmin.inscricao_eventos.model.Inscricao;
 import java.time.LocalDateTime;
 
+
 public class InscricaoResponseDTO {
 
     private Integer id;

@@ -1,10 +1,14 @@
 package com.yasmin.inscricao_eventos.dto;
 
 import com.yasmin.inscricao_eventos.model.Inscricao;
+import jakarta.validation.Valid;
 import java.util.List;
 
 public class InscricaoCriacaoRequestDTO {
+
+    @Valid
     private Inscricao inscricao;
+
     private List<RespostaCriterioResponseDTO> respostas;
 
     public Inscricao getInscricao() { return inscricao; }

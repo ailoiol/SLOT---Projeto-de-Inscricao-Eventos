@@ -12,12 +12,12 @@ import com.yasmin.inscricao_eventos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.yasmin.inscricao_eventos.dto.InscricaoCriacaoRequestDTO;
-import com.yasmin.inscricao_eventos.dto.RespostaCriterioResponseDTO;
 import com.yasmin.inscricao_eventos.model.CriterioPersonalizado;
 import com.yasmin.inscricao_eventos.model.RespostaCriterio;
 import com.yasmin.inscricao_eventos.repository.CriterioPersonalizadoRepository;
 import com.yasmin.inscricao_eventos.repository.RespostaCriterioRepository;
 import java.util.ArrayList;
+import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,7 +50,7 @@ public class InscricaoController {
     }
 
     @PostMapping
-    public InscricaoResponseDTO criar(@RequestBody InscricaoCriacaoRequestDTO request) {
+    public InscricaoResponseDTO criar(@Valid @RequestBody InscricaoCriacaoRequestDTO request) {
         Inscricao inscricao = request.getInscricao();
 
         Usuario responsavel = usuarioRepository.findById(inscricao.getResponsavel().getId())
@@ -83,18 +83,19 @@ public class InscricaoController {
     }
 
     List<CriterioPersonalizado> criteriosDoEvento = criterioPersonalizadoRepository.findByEventoId(evento.getId());
-    List<Integer> criteriosRespondidos = new ArrayList<>();
-    if (request.getRespostas() != null) {
-        for (RespostaCriterioResponseDTO respostaResponse : request.getRespostas()) {
-            criteriosRespondidos.add(respostaResponse.getCriterioPersonalizadoId());
-    }
-}
+        List<Integer> criteriosRespondidos = new ArrayList<>();
+        List<?> respostasRequest = extrairRespostasDaRequest(request);
+        if (respostasRequest != null) {
+            for (Object respostaResponse : respostasRequest) {
+                criteriosRespondidos.add((Integer) lerPropriedade(respostaResponse, "criterioPersonalizadoId"));
+            }
+        }
 
-for (CriterioPersonalizado criterio : criteriosDoEvento) {
-    if (Boolean.TRUE.equals(criterio.getObrigatorio()) && !criteriosRespondidos.contains(criterio.getId())) {
-        throw new RegraDeNegocioException("O critério \"" + criterio.getCampo() + "\" é obrigatório para este evento");
-    }
-}
+        for (CriterioPersonalizado criterio : criteriosDoEvento) {
+            if (Boolean.TRUE.equals(criterio.getObrigatorio()) && !criteriosRespondidos.contains(criterio.getId())) {
+                throw new RegraDeNegocioException("O critério \"" + criterio.getCampo() + "\" é obrigatório para este evento");
+            }
+        }
 
         inscricao.setResponsavel(responsavel);
         inscricao.setEvento(evento);
@@ -103,29 +104,29 @@ for (CriterioPersonalizado criterio : criteriosDoEvento) {
         evento.setVagasOcupadas(evento.getVagasOcupadas() + 1);
         if (evento.getVagasOcupadas() >= evento.getVagasTotais()) {
             evento.setStatus("fechado");
-    }
+        }
         eventoRepository.save(evento);
 
-        if (request.getRespostas() != null) {
+        if (respostasRequest != null) {
             List<RespostaCriterio> respostasSalvas = new ArrayList<>();
-            for (RespostaCriterioResponseDTO respostaResponse : request.getRespostas()) {
+            for (Object respostaResponse : respostasRequest) {
+                Integer criterioId = (Integer) lerPropriedade(respostaResponse, "criterioPersonalizadoId");
                 CriterioPersonalizado criterio = criterioPersonalizadoRepository
-                    .findById(respostaResponse.getCriterioPersonalizadoId())
+                    .findById(criterioId)
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Critério personalizado não encontrado"));
 
                 RespostaCriterio resposta = new RespostaCriterio();
                 resposta.setInscricao(salva);
                 resposta.setCriterioPersonalizado(criterio);
-                resposta.setValor(respostaResponse.getValor());
+                resposta.setValor(String.valueOf(lerPropriedade(respostaResponse, "valor")));
                 respostasSalvas.add(respostaCriterioRepository.save(resposta));
+            }
         }
-    }
-
     return InscricaoResponseDTO.fromEntity(salva);
 }
 
     @PutMapping("/{id}")
-    public InscricaoResponseDTO atualizar(@PathVariable Integer id, @RequestBody Inscricao dadosAtualizados) {
+    public InscricaoResponseDTO atualizar(@PathVariable Integer id, @Valid @RequestBody Inscricao dadosAtualizados) {
         Inscricao inscricao = inscricaoRepository.findById(id)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Inscrição com id " + id + " não encontrada"));
 
@@ -161,5 +162,47 @@ for (CriterioPersonalizado criterio : criteriosDoEvento) {
         eventoRepository.save(evento);
 
         return InscricaoResponseDTO.fromEntity(cancelada);
+    }
+
+    private List<?> extrairRespostasDaRequest(InscricaoCriacaoRequestDTO request) {
+        if (request == null) {
+            return null;
+        }
+
+        try {
+            Object respostas = request.getClass().getMethod("getRespostas").invoke(request);
+            if (respostas instanceof List<?> lista) {
+                return lista;
+            }
+        } catch (Exception ignored) {
+            // Ignorado: a propriedade pode ser acessada por outro nome/estrutura
+        }
+
+        return null;
+    }
+
+    private Object lerPropriedade(Object origem, String nomePropriedade) {
+        if (origem == null) {
+            return null;
+        }
+
+        if (origem instanceof java.util.Map<?, ?> mapa) {
+            return mapa.get(nomePropriedade);
+        }
+
+        try {
+            return new org.springframework.beans.BeanWrapperImpl(origem).getPropertyValue(nomePropriedade);
+        } catch (Exception ignored) {
+            // Ignorado: tenta leitura via getter caso o BeanWrapper não resolva a propriedade
+        }
+
+        String metodo = "get" + Character.toUpperCase(nomePropriedade.charAt(0))
+            + nomePropriedade.substring(1);
+
+        try {
+            return origem.getClass().getMethod(metodo).invoke(origem);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

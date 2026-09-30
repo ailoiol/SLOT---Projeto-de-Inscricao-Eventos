@@ -1,6 +1,9 @@
 package com.yasmin.inscricao_eventos.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,21 +14,28 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @NotBlank(message = "Nome é obrigatório")
     @Column(name = "nome")
     private String nome;
 
+    @NotBlank(message = "CPF é obrigatório")
     @Column(name = "cpf")
     private String cpf;
 
+    @NotBlank(message = "Telefone é obrigatório")
     @Column(name = "telefone")
     private String telefone;
 
+    @Email(message = "Email inválido")
+    @NotBlank(message = "Email é obrigatório")
     @Column(name = "email")
     private String email;
 
+    @NotBlank(message = "Senha é obrigatória")
     @Column(name = "senha_hash")
     private String senhaHash;
 
+    @NotBlank(message = "Tipo é obrigatório")
     @Column(name = "tipo")
     private String tipo;
 
@@ -47,7 +57,7 @@ public class Usuario {
     @PreUpdate
     protected void aoAtualizar() {
         this.atualizadoEm = LocalDateTime.now();
-}
+    }
 
     public Integer getId() {
         return id;
