@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InscricaoRepository extends JpaRepository<Inscricao, Integer> {
 
-    boolean existsByUsuarioIdAndEventoId(Integer usuarioId, Integer eventoId);
+    boolean existsByCpfParticipanteAndEventoId(String cpfParticipante, Integer eventoId);
 
 }

@@ -22,6 +22,15 @@ public class Inscricao {
     @Column(name ="status")
     private String status;
 
+    @Column(name = "nome_participante")
+    private String nomeParticipante;
+
+    @Column(name = "cpf_participante")
+    private String cpfParticipante;
+
+    @Column(name = "telefone_participante")
+    private String telefoneParticipante;
+
     @Column(name = "criado_em") 
     private LocalDateTime criadoEm;
 
@@ -32,6 +41,9 @@ public class Inscricao {
     protected void aoCriar() {
         this.criadoEm = LocalDateTime.now();
         this.atualizadoEm = LocalDateTime.now();
+        if (this.status == null) {
+        this.status = "ativa";
+    }
     }
 
     @PreUpdate
@@ -48,11 +60,11 @@ public class Inscricao {
         this.id = id;
     }
 
-    public Usuario getUsuario() {
+    public Usuario getResponsavel() {
         return usuario;
     }
 
-    public void setUsuario(Usuario usuario) {
+    public void setResponsavel(Usuario usuario) {
         this.usuario = usuario;
     }
 
@@ -70,6 +82,30 @@ public class Inscricao {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getNomeParticipante() {
+        return nomeParticipante;
+    }
+
+    public void setNomeParticipante(String nomeParticipante) {
+        this.nomeParticipante = nomeParticipante;
+    }
+
+    public String getCpfParticipante() {
+        return cpfParticipante;
+    }
+
+    public void setCpfParticipante(String cpfParticipante) {
+        this.cpfParticipante = cpfParticipante;
+    }
+
+    public String getTelefoneParticipante() {
+        return telefoneParticipante;
+    }
+
+    public void setTelefoneParticipante(String telefoneParticipante) {
+        this.telefoneParticipante = telefoneParticipante;
     }
 
     public LocalDateTime getCriadoEm() {

@@ -1,9 +1,12 @@
 package com.yasmin.inscricao_eventos.controller;
 
 import com.yasmin.inscricao_eventos.exception.RecursoNaoEncontradoException;
+import com.yasmin.inscricao_eventos.exception.RegraDeNegocioException;
 import com.yasmin.inscricao_eventos.dto.EventoResponseDTO;
 import com.yasmin.inscricao_eventos.model.Evento;
+import com.yasmin.inscricao_eventos.model.Usuario;
 import com.yasmin.inscricao_eventos.repository.EventoRepository;
+import com.yasmin.inscricao_eventos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,25 +19,35 @@ public class EventoController {
     @Autowired
     private EventoRepository eventoRepository;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     @GetMapping
     public List<EventoResponseDTO> listarTodos() {
         return eventoRepository.findAll()
             .stream()
             .map(EventoResponseDTO::fromEntity)
             .toList();
-}
+    }
 
     @PostMapping
     public EventoResponseDTO criar(@RequestBody Evento evento) {
+        Usuario organizador = usuarioRepository.findById(evento.getOrganizador().getId())
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Organizador não encontrado"));
+
+        if (!"organizador".equals(organizador.getTipo())) {
+            throw new RegraDeNegocioException("Apenas contas do tipo organizador podem criar eventos");
+        }
+
+        evento.setOrganizador(organizador);
         Evento salvo = eventoRepository.save(evento);
         return EventoResponseDTO.fromEntity(salvo);
     }
 
-
     @PutMapping("/{id}")
     public EventoResponseDTO atualizar(@PathVariable Integer id, @RequestBody Evento dadosAtualizados) {
-    Evento evento = eventoRepository.findById(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException("Evento com id " + id + " não encontrado"));
+        Evento evento = eventoRepository.findById(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Evento com id " + id + " não encontrado"));
 
         evento.setOrganizador(dadosAtualizados.getOrganizador());
         evento.setTitulo(dadosAtualizados.getTitulo());

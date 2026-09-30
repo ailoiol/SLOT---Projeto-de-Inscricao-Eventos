@@ -43,7 +43,13 @@ public class Evento {
     protected void aoCriar() {
         this.criadoEm = LocalDateTime.now();
         this.atualizadoEm = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = "aberto";
     }
+        if (this.vagasOcupadas == null) {
+            this.vagasOcupadas = 0;
+    }
+}
 
     @PreUpdate
     protected void aoAtualizar() {

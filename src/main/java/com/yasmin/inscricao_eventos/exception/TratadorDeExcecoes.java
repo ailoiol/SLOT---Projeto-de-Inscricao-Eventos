@@ -21,4 +21,10 @@ public class TratadorDeExcecoes {
         Map<String, String> corpo = Map.of("erro", excecao.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(corpo);
     }
+
+    @ExceptionHandler(AutenticacaoException.class)
+    public ResponseEntity<Map<String, String>> tratarAutenticacao(AutenticacaoException excecao) {
+        Map<String, String> corpo = Map.of("erro", excecao.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(corpo);
+}
 }

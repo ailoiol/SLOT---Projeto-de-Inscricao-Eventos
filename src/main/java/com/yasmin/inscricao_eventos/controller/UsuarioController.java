@@ -1,5 +1,6 @@
 package com.yasmin.inscricao_eventos.controller;
 
+
 import com.yasmin.inscricao_eventos.exception.RecursoNaoEncontradoException;
 import com.yasmin.inscricao_eventos.dto.UsuarioResponseDTO;
 import com.yasmin.inscricao_eventos.model.Usuario;
