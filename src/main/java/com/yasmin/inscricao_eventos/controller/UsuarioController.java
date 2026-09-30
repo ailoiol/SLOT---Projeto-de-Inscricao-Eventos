@@ -6,6 +6,7 @@ import com.yasmin.inscricao_eventos.dto.UsuarioResponseDTO;
 import com.yasmin.inscricao_eventos.model.Usuario;
 import com.yasmin.inscricao_eventos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,9 @@ public class UsuarioController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @GetMapping
     public List<UsuarioResponseDTO> listarTodos() {
         return usuarioRepository.findAll()
@@ -27,6 +31,7 @@ public class UsuarioController {
 
     @PostMapping
     public UsuarioResponseDTO criar(@RequestBody Usuario usuario) {
+        usuario.setSenhaHash(passwordEncoder.encode(usuario.getSenhaHash()));
         Usuario salvo = usuarioRepository.save(usuario);
         return UsuarioResponseDTO.fromEntity(salvo);
 }

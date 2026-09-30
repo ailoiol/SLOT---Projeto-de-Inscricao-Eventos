@@ -1,5 +1,6 @@
 package com.yasmin.inscricao_eventos.controller;
 
+import com.yasmin.inscricao_eventos.dto.RespostaCriterioResponseDTO;
 import com.yasmin.inscricao_eventos.model.RespostaCriterio;
 import com.yasmin.inscricao_eventos.repository.RespostaCriterioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,13 +16,17 @@ public class RespostaCriterioController {
     private RespostaCriterioRepository respostaCriterioRepository;
 
     @GetMapping("/inscricao/{inscricaoId}")
-    public List<RespostaCriterio> listarPorInscricao(@PathVariable Integer inscricaoId) {
-        return respostaCriterioRepository.findByInscricaoId(inscricaoId);
+    public List<RespostaCriterioResponseDTO> listarPorInscricao(@PathVariable Integer inscricaoId) {
+        return respostaCriterioRepository.findByInscricaoId(inscricaoId)
+            .stream()
+            .map(RespostaCriterioResponseDTO::fromEntity)
+            .toList();
     }
 
     @PostMapping
-    public RespostaCriterio criar(@RequestBody RespostaCriterio resposta) {
-        return respostaCriterioRepository.save(resposta);
+    public RespostaCriterioResponseDTO criar(@RequestBody RespostaCriterio resposta) {
+        RespostaCriterio salva = respostaCriterioRepository.save(resposta);
+        return RespostaCriterioResponseDTO.fromEntity(salva);
     }
 
     @DeleteMapping("/{id}")

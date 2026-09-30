@@ -11,6 +11,13 @@ import com.yasmin.inscricao_eventos.repository.InscricaoRepository;
 import com.yasmin.inscricao_eventos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.yasmin.inscricao_eventos.dto.InscricaoCriacaoRequestDTO;
+import com.yasmin.inscricao_eventos.dto.RespostaCriterioResponseDTO;
+import com.yasmin.inscricao_eventos.model.CriterioPersonalizado;
+import com.yasmin.inscricao_eventos.model.RespostaCriterio;
+import com.yasmin.inscricao_eventos.repository.CriterioPersonalizadoRepository;
+import com.yasmin.inscricao_eventos.repository.RespostaCriterioRepository;
+import java.util.ArrayList;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +35,12 @@ public class InscricaoController {
     @Autowired
     private EventoRepository eventoRepository;
 
+    @Autowired
+    private CriterioPersonalizadoRepository criterioPersonalizadoRepository;
+
+    @Autowired
+    private RespostaCriterioRepository respostaCriterioRepository;
+
     @GetMapping
     public List<InscricaoResponseDTO> listarTodos() {
         return inscricaoRepository.findAll()
@@ -37,35 +50,51 @@ public class InscricaoController {
     }
 
     @PostMapping
-    public InscricaoResponseDTO criar(@RequestBody Inscricao inscricao) {
+    public InscricaoResponseDTO criar(@RequestBody InscricaoCriacaoRequestDTO request) {
+        Inscricao inscricao = request.getInscricao();
+
         Usuario responsavel = usuarioRepository.findById(inscricao.getResponsavel().getId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário responsável não encontrado"));
 
         if ("organizador".equals(responsavel.getTipo())) {
             throw new RegraDeNegocioException("Contas de organizador não podem se inscrever em eventos");
-        }
+    }
 
         Evento evento = eventoRepository.findById(inscricao.getEvento().getId())
             .orElseThrow(() -> new RecursoNaoEncontradoException("Evento não encontrado"));
 
         if (!"aberto".equals(evento.getStatus())) {
             throw new RegraDeNegocioException("Este evento não está aberto para inscrições");
-        }
+    }
 
         if (evento.getVagasOcupadas() >= evento.getVagasTotais()) {
             evento.setStatus("fechado");
             eventoRepository.save(evento);
             throw new RegraDeNegocioException("As vagas deste evento já se esgotaram");
-        }
+    }
 
         boolean jaExiste = inscricaoRepository.existsByCpfParticipanteAndEventoId(
             inscricao.getCpfParticipante(),
             evento.getId()
-        );
+    );
 
         if (jaExiste) {
             throw new RegraDeNegocioException("Este CPF já está inscrito neste evento");
-        }
+    }
+
+    List<CriterioPersonalizado> criteriosDoEvento = criterioPersonalizadoRepository.findByEventoId(evento.getId());
+    List<Integer> criteriosRespondidos = new ArrayList<>();
+    if (request.getRespostas() != null) {
+        for (RespostaCriterioResponseDTO respostaResponse : request.getRespostas()) {
+            criteriosRespondidos.add(respostaResponse.getCriterioPersonalizadoId());
+    }
+}
+
+for (CriterioPersonalizado criterio : criteriosDoEvento) {
+    if (Boolean.TRUE.equals(criterio.getObrigatorio()) && !criteriosRespondidos.contains(criterio.getId())) {
+        throw new RegraDeNegocioException("O critério \"" + criterio.getCampo() + "\" é obrigatório para este evento");
+    }
+}
 
         inscricao.setResponsavel(responsavel);
         inscricao.setEvento(evento);
@@ -74,11 +103,26 @@ public class InscricaoController {
         evento.setVagasOcupadas(evento.getVagasOcupadas() + 1);
         if (evento.getVagasOcupadas() >= evento.getVagasTotais()) {
             evento.setStatus("fechado");
-        }
+    }
         eventoRepository.save(evento);
 
-        return InscricaoResponseDTO.fromEntity(salva);
+        if (request.getRespostas() != null) {
+            List<RespostaCriterio> respostasSalvas = new ArrayList<>();
+            for (RespostaCriterioResponseDTO respostaResponse : request.getRespostas()) {
+                CriterioPersonalizado criterio = criterioPersonalizadoRepository
+                    .findById(respostaResponse.getCriterioPersonalizadoId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Critério personalizado não encontrado"));
+
+                RespostaCriterio resposta = new RespostaCriterio();
+                resposta.setInscricao(salva);
+                resposta.setCriterioPersonalizado(criterio);
+                resposta.setValor(respostaResponse.getValor());
+                respostasSalvas.add(respostaCriterioRepository.save(resposta));
+        }
     }
+
+    return InscricaoResponseDTO.fromEntity(salva);
+}
 
     @PutMapping("/{id}")
     public InscricaoResponseDTO atualizar(@PathVariable Integer id, @RequestBody Inscricao dadosAtualizados) {

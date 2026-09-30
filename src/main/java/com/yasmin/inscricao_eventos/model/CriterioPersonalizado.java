@@ -1,7 +1,6 @@
 package com.yasmin.inscricao_eventos.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "criterio_personalizado")
