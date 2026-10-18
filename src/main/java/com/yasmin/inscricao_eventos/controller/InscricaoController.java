@@ -48,6 +48,21 @@ public class InscricaoController {
             .map(InscricaoResponseDTO::fromEntity)
             .toList();
     }
+    @GetMapping(params = "responsavelId")
+    public List<InscricaoResponseDTO> listarPorResponsavel(@RequestParam Integer responsavelId) {
+        return inscricaoRepository.findByUsuarioId(responsavelId)
+            .stream()
+            .map(InscricaoResponseDTO::fromEntity)
+            .toList();
+}
+
+    @GetMapping(params = "eventoId")
+    public List<InscricaoResponseDTO> listarPorEvento(@RequestParam Integer eventoId) {
+        return inscricaoRepository.findByEventoId(eventoId)
+            .stream()
+            .map(InscricaoResponseDTO::fromEntity)
+            .toList();
+}
 
     @PostMapping
     public InscricaoResponseDTO criar(@Valid @RequestBody InscricaoCriacaoRequestDTO request) {

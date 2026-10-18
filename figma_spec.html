@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inscrição de Eventos — Design Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #1e1e2e;
+    --sidebar:   #181825;
+    --panel:     #24243a;
+    --border:    #313153;
+    --canvas:    #13131f;
+    --text:      #cdd6f4;
+    --muted:     #6c7086;
+    --blue:      #89b4fa;
+    --green:     #a6e3a1;
+    --yellow:    #f9e2af;
+    --red:       #f38ba8;
+    --pink:      #cba6f7;
+    --teal:      #94e2d5;
+    --white:     #ffffff;
+    --frame-bg:  #f8fafc;
+    --frame-border: #e2e8f0;
+    --active:    #89b4fa22;
+  }
+
+  html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  /* ── Layout ── */
+  .app { display: flex; height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px; min-width: 220px; background: var(--sidebar);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 16px; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-header h1 { font-size: 13px; font-weight: 700; color: var(--white); line-height: 1.4; }
+  .sidebar-header p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .sidebar-section { padding: 12px 8px 4px; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    cursor: pointer; border-radius: 6px; margin: 1px 6px;
+    color: var(--muted); transition: all .15s;
+  }
+  .nav-item:hover { background: var(--active); color: var(--text); }
+  .nav-item.active { background: var(--active); color: var(--blue); }
+  .nav-item .icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+  .nav-item span { font-size: 12px; font-weight: 500; }
+
+  .sidebar-footer {
+    margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--muted);
+  }
+  .sidebar-footer strong { color: var(--text); }
+
+  /* ── Main canvas ── */
+  .main { flex: 1; overflow-y: auto; background: var(--canvas); }
+
+  .page { display: none; padding: 40px; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 36px; }
+  .page-header h2 { font-size: 24px; font-weight: 700; color: var(--white); }
+  .page-header p { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin: 32px 0 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h3 { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
+  .card p { color: var(--muted); line-height: 1.7; font-size: 12px; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* ── Stack badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-blue   { background: #89b4fa22; color: var(--blue); }
+  .badge-green  { background: #a6e3a122; color: var(--green); }
+  .badge-yellow { background: #f9e2af22; color: var(--yellow); }
+  .badge-red    { background: #f38ba822; color: var(--red); }
+  .badge-pink   { background: #cba6f722; color: var(--pink); }
+  .badge-teal   { background: #94e2d522; color: var(--teal); }
+
+  /* ── Status chips ── */
+  .chip-ok      { background: #22c55e20; color: #4ade80; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .chip-partial { background: #f59e0b20; color: #fbbf24; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .chip-pending { background: #ef444420; color: #f87171; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+
+  /* ── Architecture diagram ── */
+  .arch { display: flex; align-items: center; justify-content: center; gap: 0; margin: 24px 0; flex-wrap: wrap; }
+  .arch-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; text-align: center; min-width: 120px;
+  }
+  .arch-box .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; margin-bottom: 4px; }
+  .arch-box .name  { font-size: 14px; font-weight: 700; color: var(--white); }
+  .arch-box .sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .arch-arrow { font-size: 20px; color: var(--border); padding: 0 8px; }
+
+  /* ── Journey ── */
+  .journey-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+
+  .journey-lane { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+  .journey-lane h3 { font-size: 15px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .journey-lane .subtitle { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+
+  .step {
+    display: flex; gap: 14px; margin-bottom: 16px; position: relative;
+  }
+  .step:not(:last-child)::before {
+    content: ''; position: absolute; left: 15px; top: 32px; bottom: -16px;
+    width: 2px; background: var(--border);
+  }
+  .step-num {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; position: relative; z-index: 1;
+  }
+  .step-blue   { background: #89b4fa22; color: var(--blue);   border: 1.5px solid var(--blue); }
+  .step-green  { background: #a6e3a122; color: var(--green);  border: 1.5px solid var(--green); }
+  .step-pink   { background: #cba6f722; color: var(--pink);   border: 1.5px solid var(--pink); }
+  .step-teal   { background: #94e2d522; color: var(--teal);   border: 1.5px solid var(--teal); }
+  .step-yellow { background: #f9e2af22; color: var(--yellow); border: 1.5px solid var(--yellow); }
+  .step-red    { background: #f38ba822; color: var(--red);    border: 1.5px solid var(--red); }
+
+  .step-content h4 { font-size: 13px; font-weight: 600; color: var(--white); }
+  .step-content p  { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .step-content .step-badge { margin-top: 5px; }
+
+  .decision {
+    background: #f9e2af11; border: 1px dashed var(--yellow); border-radius: 8px;
+    padding: 10px 14px; margin: -4px 0 16px 44px; font-size: 11px; color: var(--yellow);
+  }
+
+  /* ── Wireframes ── */
+  .wireframes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+
+  .wireframe-wrapper { display: flex; flex-direction: column; gap: 10px; }
+  .wireframe-header  { display: flex; align-items: center; justify-content: space-between; }
+  .wireframe-header h4 { font-size: 12px; font-weight: 600; color: var(--white); }
+  .wireframe-header .file { font-size: 10px; color: var(--muted); font-family: 'Fira Code', monospace; }
+
+  .frame {
+    background: #ffffff; border: 1px solid var(--frame-border);
+    border-radius: 10px; overflow: hidden; aspect-ratio: 9/16;
+    display: flex; flex-direction: column; position: relative;
+    box-shadow: 0 4px 24px #0006;
+  }
+  .frame-bar {
+    height: 28px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0;
+    display: flex; align-items: center; gap: 5px; padding: 0 10px; flex-shrink: 0;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-r { background: #ff5f56; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .frame-url { flex: 1; background: #e2e8f0; border-radius: 4px; height: 16px; margin: 0 8px; display: flex; align-items: center; padding: 0 8px; }
+  .frame-url span { font-size: 9px; color: #64748b; font-family: 'Fira Code', monospace; }
+
+  .frame-content { flex: 1; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+
+  /* Mini UI elements */
+  .mini-nav { background: #1e40af; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin: -12px -12px 8px; }
+  .mini-nav .mn-logo { width: 60px; height: 10px; background: #ffffff44; border-radius: 3px; }
+  .mini-nav .mn-user { width: 40px; height: 10px; background: #ffffff44; border-radius: 3px; }
+
+  .mini-h1 { height: 16px; background: #1e293b; border-radius: 4px; width: 70%; }
+  .mini-h2 { height: 12px; background: #334155; border-radius: 3px; width: 85%; }
+  .mini-h3 { height: 10px; background: #475569; border-radius: 3px; }
+  .mini-input { height: 22px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px; }
+  .mini-label { height: 8px; background: #94a3b8; border-radius: 2px; width: 40%; margin-bottom: 3px; }
+  .mini-btn { height: 22px; background: #2563eb; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+  .mini-btn span { font-size: 8px; color: white; font-weight: 600; }
+  .mini-btn-outline { height: 22px; background: transparent; border: 1px solid #2563eb; border-radius: 5px; }
+  .mini-link { height: 8px; background: #93c5fd; border-radius: 2px; width: 50%; }
+  .mini-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; }
+  .mini-card-title { height: 10px; background: #1e293b; border-radius: 3px; width: 80%; margin-bottom: 5px; }
+  .mini-card-line { height: 7px; background: #94a3b8; border-radius: 2px; margin-bottom: 3px; }
+  .mini-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .mini-badge { height: 14px; border-radius: 20px; display: inline-flex; align-items: center; padding: 0 6px; }
+  .mini-badge span { font-size: 7px; font-weight: 700; }
+  .mini-badge-green { background: #dcfce7; }
+  .mini-badge-green span { color: #16a34a; }
+  .mini-badge-blue  { background: #dbeafe; }
+  .mini-badge-blue span  { color: #1d4ed8; }
+  .mini-divider { height: 1px; background: #e2e8f0; margin: 4px 0; }
+  .mini-row { display: flex; gap: 5px; align-items: center; }
+  .mini-icon { width: 16px; height: 16px; border-radius: 4px; background: #dbeafe; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .mini-chip { padding: 2px 6px; border-radius: 3px; font-size: 8px; font-weight: 600; display: inline-block; }
+  .mini-chip-ok { background: #dcfce7; color: #16a34a; }
+  .mini-chip-warn { background: #fef3c7; color: #d97706; }
+  .mini-chip-err { background: #fee2e2; color: #dc2626; }
+  .mini-select { height: 22px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+  .mini-select span { font-size: 8px; color: #64748b; }
+  .mini-select::after { content: '▾'; font-size: 8px; color: #94a3b8; }
+
+  .frame-annotation {
+    position: absolute; background: var(--pink); color: #13131f;
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    white-space: nowrap; z-index: 10;
+  }
+
+  /* ── Requirements table ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--sidebar); padding: 10px 14px; text-align: left;
+    font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .06em; border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: var(--active); }
+  tbody td { padding: 10px 14px; font-size: 12px; color: var(--text); vertical-align: top; }
+  tbody td:first-child { font-weight: 500; color: var(--white); }
+  .req-id { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ── API table ── */
+  .method {
+    font-family: 'Fira Code', monospace; font-size: 11px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .m-get    { background: #22c55e20; color: #4ade80; }
+  .m-post   { background: #3b82f620; color: #60a5fa; }
+  .m-put    { background: #f59e0b20; color: #fbbf24; }
+  .m-delete { background: #ef444420; color: #f87171; }
+
+  .path { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--text); }
+
+  /* ── ER Diagram ── */
+  .er-diagram { display: flex; justify-content: center; margin: 24px 0; overflow-x: auto; }
+  .er-table {
+    background: var(--panel); border: 1.5px solid var(--border); border-radius: 8px;
+    min-width: 160px; overflow: hidden; flex-shrink: 0;
+  }
+  .er-table-header {
+    background: var(--sidebar); padding: 8px 14px; font-size: 12px;
+    font-weight: 700; color: var(--white); border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  .er-field {
+    padding: 5px 14px; font-size: 11px; color: var(--text); font-family: 'Fira Code', monospace;
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .er-field:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .er-type { color: var(--muted); font-size: 10px; }
+  .er-pk { color: var(--yellow); }
+  .er-fk { color: var(--pink); }
+
+  .er-canvas {
+    position: relative; width: 100%; min-height: 380px; overflow: hidden;
+  }
+  .er-entity {
+    position: absolute; background: var(--panel); border: 1.5px solid var(--border);
+    border-radius: 8px; overflow: hidden; min-width: 155px;
+  }
+  .er-entity-header {
+    background: var(--sidebar); padding: 7px 12px; font-size: 12px;
+    font-weight: 700; color: var(--white); text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .er-entity-field {
+    padding: 4px 12px; font-size: 10px; color: var(--text); font-family: 'Fira Code', monospace;
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  .er-entity-field:not(:last-child) { border-bottom: 1px solid #2a2a45; }
+
+  /* ── Info boxes ── */
+  .info-box {
+    background: var(--panel); border-left: 3px solid var(--blue); border-radius: 0 8px 8px 0;
+    padding: 12px 16px; margin: 12px 0; font-size: 12px; color: var(--text); line-height: 1.6;
+  }
+  .warn-box {
+    background: #f9e2af11; border-left: 3px solid var(--yellow); border-radius: 0 8px 8px 0;
+    padding: 12px 16px; margin: 12px 0; font-size: 12px; color: var(--yellow); line-height: 1.6;
+  }
+
+  /* ── Rule list ── */
+  .rule-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .rule-list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
+  }
+  .rule-list li .rule-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .rule-list li .rule-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .rule-list li .rule-text strong { color: var(--white); }
+
+  /* ── Breadcrumb / page indicator ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 50; background: var(--sidebar);
+    border-bottom: 1px solid var(--border); padding: 10px 40px;
+    display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted);
+  }
+  .topbar-section { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>Inscrição de Eventos</h1>
+      <p>Design Spec · v1.0</p>
+    </div>
+
+    <div class="sidebar-section">Páginas</div>
+
+    <div class="nav-item active" onclick="showPage('overview', this)">
+      <span class="icon">🏗️</span><span>Visão Geral</span>
+    </div>
+    <div class="nav-item" onclick="showPage('journey', this)">
+      <span class="icon">🗺️</span><span>Jornada do Usuário</span>
+    </div>
+    <div class="nav-item" onclick="showPage('screens', this)">
+      <span class="icon">🖼️</span><span>Telas</span>
+    </div>
+    <div class="nav-item" onclick="showPage('requirements', this)">
+      <span class="icon">📋</span><span>Requisitos</span>
+    </div>
+    <div class="nav-item" onclick="showPage('api', this)">
+      <span class="icon">🗄️</span><span>API & Dados</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top: 16px;">Status</div>
+    <div style="padding: 0 12px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--muted)">Backend</span>
+        <span class="chip-ok">✓ Online</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--muted)">Frontend</span>
+        <span class="chip-partial">⚡ Parcial</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--muted)">DB</span>
+        <span class="chip-ok">✓ PostgreSQL</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <strong>Stack:</strong> Java 21 · Spring Boot 4<br/>
+      Next.js 16 · Tailwind · TypeScript
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ═══════════════════════════════════════════════
+         PAGE 1 — VISÃO GERAL
+    ═══════════════════════════════════════════════ -->
+    <div class="topbar"><span class="topbar-section" id="topbar-title">Visão Geral</span></div>
+    <div id="page-overview" class="page active">
+      <div class="page-header">
+        <h2>🏗️ Visão Geral do Projeto</h2>
+        <p>Sistema web de inscrição em eventos com dois perfis de usuário: <strong style="color:var(--blue)">Organizador</strong> (cria e gerencia eventos) e <strong style="color:var(--pink)">Participante</strong> (se inscreve nos eventos).</p>
+      </div>
+
+      <!-- Architecture -->
+      <div class="section-title">Arquitetura</div>
+      <div class="arch">
+        <div class="arch-box">
+          <div class="label">Frontend</div>
+          <div class="name" style="color:var(--blue)">Next.js 16</div>
+          <div class="sub">TypeScript · Tailwind</div>
+          <div class="sub">:3000</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+          <div class="label">Proxy</div>
+          <div class="name" style="color:var(--muted)">/api/*</div>
+          <div class="sub">Rewrite interno</div>
+          <div class="sub">sem CORS</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+          <div class="label">Backend</div>
+          <div class="name" style="color:var(--green)">Spring Boot 4</div>
+          <div class="sub">Java 21 · REST</div>
+          <div class="sub">:8080</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+          <div class="label">Banco</div>
+          <div class="name" style="color:var(--yellow)">PostgreSQL</div>
+          <div class="sub">5 tabelas</div>
+          <div class="sub">:15432</div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Autenticação:</strong> Sem JWT. Login retorna o objeto <code style="font-family:Fira Code;font-size:11px;">Usuario</code> completo e ele é salvo em <code style="font-family:Fira Code;font-size:11px;">localStorage["usuario"]</code>. O tipo do usuário (<code style="font-family:Fira Code;font-size:11px;">organizador</code> / <code style="font-family:Fira Code;font-size:11px;">participante</code>) controla o que aparece no frontend.
+      </div>
+
+      <!-- Entities summary -->
+      <div class="section-title">Entidades do Sistema</div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>👤 Usuario</h3>
+          <p>Tem dois tipos: <span class="badge badge-blue">organizador</span> e <span class="badge badge-pink">participante</span>. Senha armazenada com BCrypt. Campo enviado na criação: <code style="font-family:Fira Code;font-size:10px;">senhaHash</code>.</p>
+        </div>
+        <div class="card">
+          <h3>🎪 Evento</h3>
+          <p>Criado apenas por organizadores. Tem status: <span class="badge badge-green">aberto</span> <span class="badge badge-yellow">fechado</span> <span class="badge badge-red">cancelado</span>. Fecha automaticamente quando vagas se esgotam.</p>
+        </div>
+        <div class="card">
+          <h3>📝 Inscrição</h3>
+          <p>Vincula <em>Responsável</em> (usuário logado) + <em>Evento</em>. Requer <code style="font-family:Fira Code;font-size:10px;">nomeParticipante</code> e <code style="font-family:Fira Code;font-size:10px;">cpfParticipante</code> — podem diferir do usuário logado.</p>
+        </div>
+        <div class="card">
+          <h3>🔧 CriterioPersonalizado</h3>
+          <p>Perguntas extras vinculadas a um evento. Tipo: texto, número, booleano. Podem ser obrigatórias ou opcionais.</p>
+        </div>
+        <div class="card">
+          <h3>💬 RespostaCriterio</h3>
+          <p>Resposta de uma inscrição a um critério personalizado. Vinculada a Inscrição + Critério.</p>
+        </div>
+        <div class="card" style="border-color: var(--border); opacity:.6;">
+          <h3 style="color:var(--muted)">+ Futuro</h3>
+          <p>Upload de comprovantes, notificações por e-mail, painel do organizador com métricas de inscrições.</p>
+        </div>
+      </div>
+
+      <!-- Regras de negócio -->
+      <div class="section-title">Regras de Negócio Críticas</div>
+      <ul class="rule-list">
+        <li>
+          <span class="rule-icon">🔒</span>
+          <span class="rule-text"><strong>Controle de tipo:</strong> Backend retorna 409 se um <code style="font-family:Fira Code;font-size:11px;">participante</code> tentar criar um evento. O frontend deve ocultar o botão, mas o backend é a fonte da verdade.</span>
+        </li>
+        <li>
+          <span class="rule-icon">⏰</span>
+          <span class="rule-text"><strong>Janela de cancelamento:</strong> Inscrições não podem ser canceladas nas 2 horas anteriores ao evento. O backend rejeita com 409 e o frontend deve exibir a mensagem de erro.</span>
+        </li>
+        <li>
+          <span class="rule-icon">🔄</span>
+          <span class="rule-text"><strong>Reabertura automática:</strong> Cancelar uma inscrição libera uma vaga. Se o evento estava com status <em>fechado</em> por falta de vagas, ele volta para <em>aberto</em> automaticamente.</span>
+        </li>
+        <li>
+          <span class="rule-icon">👥</span>
+          <span class="rule-text"><strong>Participante ≠ Responsável:</strong> Quem faz a inscrição é o responsável (usuário logado), mas a inscrição é em nome de um participante — que pode ser outra pessoa (ex: dependente). Por isso <code style="font-family:Fira Code;font-size:11px;">nomeParticipante</code> e <code style="font-family:Fira Code;font-size:11px;">cpfParticipante</code> são campos separados.</span>
+        </li>
+        <li>
+          <span class="rule-icon">🔐</span>
+          <span class="rule-text"><strong>Senha:</strong> Enviada como texto plano no campo <code style="font-family:Fira Code;font-size:11px;">senhaHash</code> no cadastro. O backend aplica BCrypt. No login, o campo é <code style="font-family:Fira Code;font-size:11px;">senha</code> (não <code style="font-family:Fira Code;font-size:11px;">senhaHash</code>).</span>
+        </li>
+      </ul>
+
+      <!-- Tech stack -->
+      <div class="section-title">Stack Tecnológica</div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Backend</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+            <span class="badge badge-green">Java 21</span>
+            <span class="badge badge-green">Spring Boot 4.1.1</span>
+            <span class="badge badge-green">Spring Data JPA</span>
+            <span class="badge badge-green">Spring Security Crypto</span>
+            <span class="badge badge-yellow">PostgreSQL 15</span>
+            <span class="badge badge-yellow">BCrypt</span>
+            <span class="badge badge-teal">Maven</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Frontend</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+            <span class="badge badge-blue">Next.js 16.4</span>
+            <span class="badge badge-blue">React 19</span>
+            <span class="badge badge-blue">TypeScript 5</span>
+            <span class="badge badge-teal">Tailwind CSS 4</span>
+            <span class="badge badge-pink">App Router</span>
+            <span class="badge badge-yellow">localStorage (auth)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAGE 2 — JORNADA DO USUÁRIO
+    ═══════════════════════════════════════════════ -->
+    <div id="page-journey" class="page">
+      <div class="page-header">
+        <h2>🗺️ Jornada do Usuário</h2>
+        <p>Fluxos completos para os dois perfis do sistema — do primeiro acesso até as ações principais.</p>
+      </div>
+
+      <div class="journey-cols">
+
+        <!-- ORGANIZADOR -->
+        <div class="journey-lane">
+          <h3 style="color:var(--blue)">👔 Organizador</h3>
+          <p class="subtitle">Cria e gerencia eventos, define critérios personalizados</p>
+
+          <div class="step">
+            <div class="step-num step-blue">1</div>
+            <div class="step-content">
+              <h4>Acessa o sistema</h4>
+              <p>Entra em <code style="font-family:Fira Code;font-size:10px;">/login</code> ou é redirecionado caso não autenticado.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-blue">2</div>
+            <div class="step-content">
+              <h4>Cria conta (se necessário)</h4>
+              <p>Preenche nome, CPF, telefone, e-mail, senha e seleciona tipo <strong style="color:var(--blue)">Organizador</strong>.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /usuarios</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-blue">3</div>
+            <div class="step-content">
+              <h4>Faz login</h4>
+              <p>Email + senha → recebe objeto <code style="font-family:Fira Code;font-size:10px;">Usuario</code> → salvo em localStorage.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /login</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-green">4</div>
+            <div class="step-content">
+              <h4>Visualiza lista de eventos</h4>
+              <p>Vê todos os eventos disponíveis. Botão <strong>Criar Evento</strong> visível apenas para organizadores.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /eventos</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-pink">5</div>
+            <div class="step-content">
+              <h4>Cria novo evento</h4>
+              <p>Preenche título, descrição, data/hora e total de vagas. O organizador é vinculado automaticamente.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /eventos</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-teal">6</div>
+            <div class="step-content">
+              <h4>Adiciona critérios personalizados</h4>
+              <p>Define perguntas extras que participantes devem responder ao se inscrever (ex: "Tem restrição alimentar?").</p>
+              <div class="step-badge"><span class="badge badge-green">POST /criterios-personalizados</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-yellow">7</div>
+            <div class="step-content">
+              <h4>Acompanha inscrições</h4>
+              <p>Pode listar e visualizar todas as inscrições do evento.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /inscricoes</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-red">8</div>
+            <div class="step-content">
+              <h4>Edita ou cancela evento</h4>
+              <p>Pode atualizar informações ou cancelar o evento (muda status para <em>cancelado</em>).</p>
+              <div class="step-badge"><span class="badge badge-yellow">PUT /eventos/{id}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PARTICIPANTE -->
+        <div class="journey-lane">
+          <h3 style="color:var(--pink)">🙋 Participante</h3>
+          <p class="subtitle">Explora eventos e realiza inscrições em nome próprio ou de terceiros</p>
+
+          <div class="step">
+            <div class="step-num step-pink">1</div>
+            <div class="step-content">
+              <h4>Acessa o sistema</h4>
+              <p>Entra em <code style="font-family:Fira Code;font-size:10px;">/login</code> ou é redirecionado caso não autenticado.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-pink">2</div>
+            <div class="step-content">
+              <h4>Cria conta (se necessário)</h4>
+              <p>Seleciona tipo <strong style="color:var(--pink)">Participante</strong>. Não verá opções de criar evento após o login.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /usuarios</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-pink">3</div>
+            <div class="step-content">
+              <h4>Faz login</h4>
+              <p>Email + senha → objeto salvo em localStorage → redirecionado para <code style="font-family:Fira Code;font-size:10px;">/eventos</code>.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /login</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-blue">4</div>
+            <div class="step-content">
+              <h4>Explora o mural de eventos</h4>
+              <p>Vê cards de todos os eventos: título, data, vagas disponíveis, status. Sem botão "Criar Evento".</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /eventos</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-teal">5</div>
+            <div class="step-content">
+              <h4>Abre detalhe do evento</h4>
+              <p>Vê descrição completa, organizador e critérios personalizados. Botão <strong>Inscrever-se</strong> disponível se status <em>aberto</em>.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /eventos/{id}</span></div>
+            </div>
+          </div>
+
+          <div class="decision">⚖️ Se o evento estiver <strong>fechado</strong> ou <strong>cancelado</strong> → botão de inscrição desabilitado / oculto.</div>
+
+          <div class="step">
+            <div class="step-num step-green">6</div>
+            <div class="step-content">
+              <h4>Realiza a inscrição</h4>
+              <p>Preenche nome e CPF do participante + respostas aos critérios. Pode inscrever outra pessoa.</p>
+              <div class="step-badge"><span class="badge badge-green">POST /inscricoes</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-yellow">7</div>
+            <div class="step-content">
+              <h4>Acompanha suas inscrições</h4>
+              <p>Em <code style="font-family:Fira Code;font-size:10px;">/minhas-inscricoes</code> vê status de cada inscrição: <em>ativa</em> ou <em>cancelada</em>.</p>
+              <div class="step-badge"><span class="badge badge-blue">GET /inscricoes</span></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num step-red">8</div>
+            <div class="step-content">
+              <h4>Cancela inscrição (se necessário)</h4>
+              <p>Só permitido se faltam mais de 2h para o evento. Backend retorna 409 caso contrário.</p>
+              <div class="step-badge"><span class="badge badge-red">DELETE /inscricoes/{id}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shared flows -->
+      <div class="section-title">Fluxo de Autenticação</div>
+      <div class="card">
+        <div style="display:flex;gap:0;align-items:center;flex-wrap:wrap;justify-content:center;gap:8px;">
+          <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted)">1 — Rota /</div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">Home</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Checa localStorage</div>
+          </div>
+          <div style="color:var(--muted);font-size:18px;padding:0 4px;">→</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="background:var(--sidebar);border:1px solid var(--green);border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:10px;color:var(--green)">Autenticado</div>
+              <div style="font-size:12px;font-weight:600;color:var(--white)">→ /eventos</div>
+            </div>
+            <div style="background:var(--sidebar);border:1px solid var(--red);border-radius:8px;padding:8px 14px;text-align:center;">
+              <div style="font-size:10px;color:var(--red)">Não autenticado</div>
+              <div style="font-size:12px;font-weight:600;color:var(--white)">→ /login</div>
+            </div>
+          </div>
+          <div style="color:var(--muted);font-size:18px;padding:0 4px;">→</div>
+          <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted)">POST /login</div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">Login</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">email + senha</div>
+          </div>
+          <div style="color:var(--muted);font-size:18px;padding:0 4px;">→</div>
+          <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted)">localStorage["usuario"]</div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">Sessão ativa</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">objeto Usuario salvo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAGE 3 — TELAS
+    ═══════════════════════════════════════════════ -->
+    <div id="page-screens" class="page">
+      <div class="page-header">
+        <h2>🖼️ Telas</h2>
+        <p>Wireframes anotados de todas as páginas do frontend. Status: <span class="chip-ok">✓ Implementado</span> <span class="chip-partial">⚡ Parcial</span> <span class="chip-pending">✗ Pendente</span></p>
+      </div>
+
+      <div class="wireframes-grid">
+
+        <!-- LOGIN -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Login</h4>
+            <span class="chip-ok">✓ Implementado</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/login/page.tsx</div>
+          <div class="frame">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/login</span></div>
+            </div>
+            <div class="frame-content">
+              <div style="height:20px;"></div>
+              <div class="mini-h1" style="width:40%;margin:0 auto;"></div>
+              <div style="height:12px;"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div style="height:6px;"></div>
+              <div class="mini-btn"><span>Entrar</span></div>
+              <div style="height:8px;"></div>
+              <div style="text-align:center;"><div class="mini-link" style="margin:0 auto;"></div></div>
+              <div style="font-size:9px;color:#94a3b8;text-align:center;margin-top:4px;">Não tem conta? Criar conta</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            → POST <code style="font-family:Fira Code">/login</code><br/>
+            → Salva em localStorage<br/>
+            → Redireciona para /eventos
+          </div>
+        </div>
+
+        <!-- CADASTRO -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Cadastro</h4>
+            <span class="chip-ok">✓ Implementado</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/cadastro/page.tsx</div>
+          <div class="frame">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/cadastro</span></div>
+            </div>
+            <div class="frame-content">
+              <div class="mini-h1" style="width:50%;"></div>
+              <div style="height:8px;"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div class="mini-row">
+                <div style="flex:1;"><div class="mini-label"></div><div class="mini-input"></div></div>
+                <div style="flex:1;"><div class="mini-label"></div><div class="mini-input"></div></div>
+              </div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div class="mini-label"></div>
+              <div class="mini-select"><span>Participante</span></div>
+              <div style="height:4px;"></div>
+              <div class="mini-btn"><span>Criar conta</span></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            → POST <code style="font-family:Fira Code">/usuarios</code><br/>
+            → Campo senha → <code style="font-family:Fira Code">senhaHash</code><br/>
+            → Redireciona para /login
+          </div>
+        </div>
+
+        <!-- LISTA EVENTOS -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Lista de Eventos</h4>
+            <span class="chip-partial">⚡ Parcial</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/eventos/page.tsx</div>
+          <div class="frame">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/eventos</span></div>
+            </div>
+            <div class="frame-content" style="padding:0;overflow:hidden;">
+              <div class="mini-nav">
+                <div class="mini-nav-logo" style="width:80px;height:10px;background:#ffffff44;border-radius:3px;"></div>
+                <div class="mini-nav-user" style="width:50px;height:10px;background:#ffffff44;border-radius:3px;"></div>
+              </div>
+              <div style="padding:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <div class="mini-h1" style="width:60%;"></div>
+                  <div style="width:60px;height:18px;background:#2563eb;border-radius:4px;display:flex;align-items:center;justify-content:center;"><span style="font-size:8px;color:white;font-weight:600;">+ Criar</span></div>
+                </div>
+                <div class="mini-cards-grid">
+                  <div class="mini-card">
+                    <div class="mini-card-title"></div>
+                    <div class="mini-card-line" style="width:60%"></div>
+                    <div style="display:flex;gap:3px;margin-top:4px;"><div class="mini-badge mini-badge-green"><span>aberto</span></div></div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title"></div>
+                    <div class="mini-card-line" style="width:70%"></div>
+                    <div style="display:flex;gap:3px;margin-top:4px;"><div class="mini-badge mini-badge-blue"><span>fechado</span></div></div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title"></div>
+                    <div class="mini-card-line" style="width:55%"></div>
+                    <div style="display:flex;gap:3px;margin-top:4px;"><div class="mini-badge mini-badge-green"><span>aberto</span></div></div>
+                  </div>
+                  <div class="mini-card" style="opacity:.4;">
+                    <div class="mini-card-title"></div>
+                    <div class="mini-card-line"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            ⚡ Falta: botão inscrever-se<br/>
+            ⚡ Falta: filtros por status<br/>
+            ⚡ Falta: guard de autenticação
+          </div>
+        </div>
+
+        <!-- DETALHE EVENTO -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Detalhe do Evento</h4>
+            <span class="chip-partial">⚡ Parcial</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/eventos/[id]/page.tsx</div>
+          <div class="frame">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/eventos/1</span></div>
+            </div>
+            <div class="frame-content" style="padding:0;overflow:hidden;">
+              <div class="mini-nav"><div style="width:80px;height:10px;background:#ffffff44;border-radius:3px;"></div><div style="width:50px;height:10px;background:#ffffff44;border-radius:3px;"></div></div>
+              <div style="padding:10px;">
+                <div class="mini-h1" style="width:80%;margin-bottom:6px;"></div>
+                <div class="mini-h2" style="width:90%;margin-bottom:4px;"></div>
+                <div class="mini-h2" style="width:70%;margin-bottom:8px;"></div>
+                <div style="display:flex;gap:4px;margin-bottom:8px;">
+                  <div style="background:#dcfce7;border-radius:4px;padding:3px 8px;font-size:8px;color:#16a34a;font-weight:700;">aberto</div>
+                  <div style="background:#dbeafe;border-radius:4px;padding:3px 8px;font-size:8px;color:#1d4ed8;">5/20 vagas</div>
+                </div>
+                <div class="mini-divider"></div>
+                <div style="font-size:9px;color:#94a3b8;margin:6px 0 4px;font-weight:600;">INSCREVER-SE</div>
+                <div class="mini-label"></div>
+                <div class="mini-input" style="margin-bottom:4px;"></div>
+                <div class="mini-label"></div>
+                <div class="mini-input" style="margin-bottom:6px;"></div>
+                <div class="mini-btn"><span>Confirmar Inscrição</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            ⚡ Falta: formulário de inscrição<br/>
+            ⚡ Falta: critérios personalizados<br/>
+            ⚡ Falta: guard participante
+          </div>
+        </div>
+
+        <!-- CRIAR EVENTO -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Criar Evento</h4>
+            <span class="chip-pending">✗ Pendente</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/eventos/novo/page.tsx</div>
+          <div class="frame" style="opacity:.7;">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/eventos/novo</span></div>
+            </div>
+            <div class="frame-content">
+              <div class="mini-h1" style="width:55%;margin-bottom:8px;"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div class="mini-label"></div>
+              <div class="mini-input" style="height:40px;"></div>
+              <div class="mini-row">
+                <div style="flex:1;"><div class="mini-label"></div><div class="mini-input"></div></div>
+                <div style="flex:1;"><div class="mini-label"></div><div class="mini-input"></div></div>
+              </div>
+              <div class="mini-label"></div>
+              <div class="mini-input"></div>
+              <div style="height:6px;"></div>
+              <div class="mini-btn"><span>Criar Evento</span></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            ✗ Página ainda não criada<br/>
+            → Redirecionar se não-organizador<br/>
+            → POST <code style="font-family:Fira Code">/eventos</code>
+          </div>
+        </div>
+
+        <!-- MINHAS INSCRIÇÕES -->
+        <div class="wireframe-wrapper">
+          <div class="wireframe-header">
+            <h4>Minhas Inscrições</h4>
+            <span class="chip-pending">✗ Pendente</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Fira Code',monospace;margin-bottom:6px;">app/minhas-inscricoes/page.tsx</div>
+          <div class="frame" style="opacity:.7;">
+            <div class="frame-bar">
+              <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+              <div class="frame-url"><span>localhost:3000/minhas-inscricoes</span></div>
+            </div>
+            <div class="frame-content" style="padding:0;overflow:hidden;">
+              <div class="mini-nav"><div style="width:80px;height:10px;background:#ffffff44;border-radius:3px;"></div><div style="width:50px;height:10px;background:#ffffff44;border-radius:3px;"></div></div>
+              <div style="padding:10px;">
+                <div class="mini-h1" style="width:65%;margin-bottom:10px;"></div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                  <div class="mini-card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                      <div class="mini-card-title" style="flex:1;margin-right:6px;"></div>
+                      <div class="mini-chip mini-chip-ok">ativa</div>
+                    </div>
+                    <div class="mini-card-line" style="width:60%"></div>
+                    <div style="margin-top:4px;"><div style="width:50px;height:14px;background:#fee2e2;border-radius:4px;display:flex;align-items:center;justify-content:center;"><span style="font-size:7px;color:#dc2626;font-weight:600;">Cancelar</span></div></div>
+                  </div>
+                  <div class="mini-card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                      <div class="mini-card-title" style="flex:1;margin-right:6px;"></div>
+                      <div class="mini-chip mini-chip-err">cancelada</div>
+                    </div>
+                    <div class="mini-card-line" style="width:55%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.6;">
+            ✗ Página ainda não criada<br/>
+            → Filtrar por usuario.id<br/>
+            → DELETE <code style="font-family:Fira Code">/inscricoes/{id}</code>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Navigation flow -->
+      <div class="section-title">Fluxo de Navegação</div>
+      <div class="card" style="overflow-x:auto;">
+        <svg width="900" height="160" viewBox="0 0 900 160" fill="none" xmlns="http://www.w3.org/2000/svg" style="min-width:700px;">
+          <!-- nodes -->
+          <rect x="10" y="55" width="100" height="50" rx="8" fill="#24243a" stroke="#89b4fa" stroke-width="1.5"/>
+          <text x="60" y="74" text-anchor="middle" fill="#89b4fa" font-size="10" font-weight="600">/login</text>
+          <text x="60" y="89" text-anchor="middle" fill="#6c7086" font-size="9">ou /cadastro</text>
+
+          <rect x="160" y="55" width="120" height="50" rx="8" fill="#24243a" stroke="#a6e3a1" stroke-width="1.5"/>
+          <text x="220" y="74" text-anchor="middle" fill="#a6e3a1" font-size="10" font-weight="600">/eventos</text>
+          <text x="220" y="89" text-anchor="middle" fill="#6c7086" font-size="9">Mural de eventos</text>
+
+          <rect x="340" y="10" width="130" height="50" rx="8" fill="#24243a" stroke="#89b4fa" stroke-width="1.5"/>
+          <text x="405" y="30" text-anchor="middle" fill="#89b4fa" font-size="10" font-weight="600">/eventos/novo</text>
+          <text x="405" y="45" text-anchor="middle" fill="#6c7086" font-size="9">Apenas organizador</text>
+
+          <rect x="340" y="100" width="130" height="50" rx="8" fill="#24243a" stroke="#cba6f7" stroke-width="1.5"/>
+          <text x="405" y="119" text-anchor="middle" fill="#cba6f7" font-size="10" font-weight="600">/eventos/[id]</text>
+          <text x="405" y="134" text-anchor="middle" fill="#6c7086" font-size="9">Detalhe + inscrição</text>
+
+          <rect x="540" y="100" width="140" height="50" rx="8" fill="#24243a" stroke="#94e2d5" stroke-width="1.5"/>
+          <text x="610" y="119" text-anchor="middle" fill="#94e2d5" font-size="10" font-weight="600">/minhas-inscricoes</text>
+          <text x="610" y="134" text-anchor="middle" fill="#6c7086" font-size="9">Apenas participante</text>
+
+          <!-- arrows -->
+          <line x1="110" y1="80" x2="158" y2="80" stroke="#313153" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="280" y1="60" x2="338" y2="38" stroke="#313153" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="280" y1="100" x2="338" y2="122" stroke="#313153" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="470" y1="125" x2="538" y2="125" stroke="#313153" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <defs>
+            <marker id="arrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="#313153"/>
+            </marker>
+          </defs>
+
+          <!-- labels on arrows -->
+          <text x="134" y="73" fill="#6c7086" font-size="8">login OK</text>
+          <text x="295" y="45" fill="#89b4fa" font-size="8">organizador</text>
+          <text x="295" y="115" fill="#6c7086" font-size="8">click card</text>
+          <text x="484" y="118" fill="#6c7086" font-size="8">após inscrição</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAGE 4 — REQUISITOS
+    ═══════════════════════════════════════════════ -->
+    <div id="page-requirements" class="page">
+      <div class="page-header">
+        <h2>📋 Requisitos Funcionais</h2>
+        <p>Todos os requisitos do sistema com status de implementação atual.</p>
+      </div>
+
+      <div class="section-title">Autenticação & Usuário</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>ID</th><th>Requisito</th><th>Responsável</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="req-id">RF-01</td>
+              <td>Criar conta com nome, CPF, telefone, e-mail, senha e tipo</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-02</td>
+              <td>Login com e-mail + senha → retorna dados do usuário</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-03</td>
+              <td>Manter sessão ativa via localStorage</td>
+              <td><span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-04</td>
+              <td>Redirecionar usuário não autenticado para login</td>
+              <td><span class="badge badge-yellow">Frontend ⚡</span></td>
+              <td><span class="chip-partial">⚡ Parcial</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-05</td>
+              <td>Logout — limpar sessão e redirecionar</td>
+              <td><span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-06</td>
+              <td>Atualizar dados do usuário (nome, telefone, etc.)</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Gestão de Eventos</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>ID</th><th>Requisito</th><th>Responsável</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="req-id">RF-07</td>
+              <td>Listar todos os eventos com título, data, vagas e status</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-08</td>
+              <td>Visualizar detalhe completo de um evento</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-green">Frontend ✓</span></td>
+              <td><span class="chip-ok">✓ Implementado</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-09</td>
+              <td>Criar evento (somente organizador) — título, descrição, data, vagas</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-10</td>
+              <td>Editar evento existente</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-11</td>
+              <td>Cancelar/excluir evento</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-12</td>
+              <td>Fechar evento automaticamente quando vagas se esgotam</td>
+              <td><span class="badge badge-green">Backend ✓</span></td>
+              <td><span class="chip-ok">✓ Backend</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Inscrições</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>ID</th><th>Requisito</th><th>Responsável</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="req-id">RF-13</td>
+              <td>Inscrever participante em evento com nome e CPF do participante</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-14</td>
+              <td>Listar inscrições do usuário logado (minhas inscrições)</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-15</td>
+              <td>Cancelar inscrição (bloqueado nas 2h anteriores ao evento)</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-16</td>
+              <td>Exibir status da inscrição: ativa / cancelada</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-17</td>
+              <td>Reabrir evento ao cancelar inscrição se estava fechado por falta de vagas</td>
+              <td><span class="badge badge-green">Backend ✓</span></td>
+              <td><span class="chip-ok">✓ Backend</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Critérios Personalizados</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>ID</th><th>Requisito</th><th>Responsável</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="req-id">RF-18</td>
+              <td>Criar critérios personalizados para um evento (texto, número, booleano)</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-19</td>
+              <td>Exibir critérios no formulário de inscrição e coletar respostas</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="req-id">RF-20</td>
+              <td>Validar critérios obrigatórios antes de confirmar inscrição</td>
+              <td><span class="badge badge-green">Backend ✓</span> <span class="badge badge-red">Frontend ✗</span></td>
+              <td><span class="chip-pending">✗ Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="section-title">Progresso Geral</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--text)">Implementação do Frontend</span>
+          <span style="font-size:12px;font-weight:700;color:var(--blue)">30%</span>
+        </div>
+        <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden;">
+          <div style="width:30%;height:100%;background:linear-gradient(90deg,var(--blue),var(--pink));border-radius:99px;"></div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:14px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4ade80;"></span>
+            <span style="font-size:11px;color:var(--muted);">Implementado — 6 requisitos</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#fbbf24;"></span>
+            <span style="font-size:11px;color:var(--muted);">Parcial — 1 requisito</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f87171;"></span>
+            <span style="font-size:11px;color:var(--muted);">Pendente — 13 requisitos</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAGE 5 — API & DADOS
+    ═══════════════════════════════════════════════ -->
+    <div id="page-api" class="page">
+      <div class="page-header">
+        <h2>🗄️ API & Dados</h2>
+        <p>Todos os endpoints REST do backend e o diagrama de entidades do banco de dados.</p>
+      </div>
+
+      <div class="section-title">Endpoints da API</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th><th>Permissão</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/login</td>
+              <td>Autenticar usuário. Body: <code style="font-family:Fira Code;font-size:10px;">{ email, senha }</code></td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/usuarios</td>
+              <td>Listar todos os usuários</td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/usuarios</td>
+              <td>Criar usuário. Body: <code style="font-family:Fira Code;font-size:10px;">{ nome, cpf, telefone, email, senhaHash, tipo }</code></td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-put">PUT</span></td>
+              <td class="path">/usuarios/{id}</td>
+              <td>Atualizar dados do usuário</td>
+              <td><span class="badge badge-blue">Autenticado</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-delete">DELETE</span></td>
+              <td class="path">/usuarios/{id}</td>
+              <td>Excluir usuário</td>
+              <td><span class="badge badge-blue">Autenticado</span></td>
+            </tr>
+            <tr><td colspan="4" style="padding:4px 14px;background:var(--sidebar);font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Eventos</td></tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/eventos</td>
+              <td>Listar todos os eventos</td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/eventos</td>
+              <td>Criar evento. Body: <code style="font-family:Fira Code;font-size:10px;">{ titulo, descricao, dataEvento, vagasTotais, organizador: {id} }</code></td>
+              <td><span class="badge badge-blue">Organizador</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/eventos/{id}</td>
+              <td>Buscar evento por ID</td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-put">PUT</span></td>
+              <td class="path">/eventos/{id}</td>
+              <td>Atualizar evento</td>
+              <td><span class="badge badge-blue">Organizador</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-delete">DELETE</span></td>
+              <td class="path">/eventos/{id}</td>
+              <td>Excluir evento</td>
+              <td><span class="badge badge-blue">Organizador</span></td>
+            </tr>
+            <tr><td colspan="4" style="padding:4px 14px;background:var(--sidebar);font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Inscrições</td></tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/inscricoes</td>
+              <td>Listar todas as inscrições</td>
+              <td><span class="badge badge-blue">Autenticado</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/inscricoes</td>
+              <td>Criar inscrição. Body: <code style="font-family:Fira Code;font-size:10px;">{ responsavel: {id}, evento: {id}, nomeParticipante, cpfParticipante }</code></td>
+              <td><span class="badge badge-pink">Participante</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/inscricoes/{id}</td>
+              <td>Buscar inscrição por ID</td>
+              <td><span class="badge badge-blue">Autenticado</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-delete">DELETE</span></td>
+              <td class="path">/inscricoes/{id}</td>
+              <td>Cancelar inscrição (regra das 2h). Retorna 409 se dentro da janela.</td>
+              <td><span class="badge badge-pink">Participante</span></td>
+            </tr>
+            <tr><td colspan="4" style="padding:4px 14px;background:var(--sidebar);font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Critérios & Respostas</td></tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/criterios-personalizados/evento/{eventoId}</td>
+              <td>Listar critérios de um evento</td>
+              <td><span class="badge badge-teal">Público</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/criterios-personalizados</td>
+              <td>Criar critério. Body: <code style="font-family:Fira Code;font-size:10px;">{ evento: {id}, pergunta, tipo, obrigatorio }</code></td>
+              <td><span class="badge badge-blue">Organizador</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-delete">DELETE</span></td>
+              <td class="path">/criterios-personalizados/{id}</td>
+              <td>Excluir critério</td>
+              <td><span class="badge badge-blue">Organizador</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-post">POST</span></td>
+              <td class="path">/respostas-criterio</td>
+              <td>Criar resposta de inscrição a um critério</td>
+              <td><span class="badge badge-pink">Participante</span></td>
+            </tr>
+            <tr>
+              <td><span class="method m-get">GET</span></td>
+              <td class="path">/respostas-criterio/inscricao/{inscricaoId}</td>
+              <td>Listar respostas de uma inscrição</td>
+              <td><span class="badge badge-blue">Autenticado</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- HTTP errors -->
+      <div class="section-title">Códigos de Erro Relevantes</div>
+      <div class="grid-3">
+        <div class="card" style="border-color:#4ade8033;">
+          <h3 style="color:var(--green)">200 / 201</h3>
+          <p>Sucesso. Retorna o recurso criado ou atualizado.</p>
+        </div>
+        <div class="card" style="border-color:#f38ba833;">
+          <h3 style="color:var(--red)">401</h3>
+          <p>Credenciais inválidas no login.</p>
+        </div>
+        <div class="card" style="border-color:#f38ba833;">
+          <h3 style="color:var(--red)">404</h3>
+          <p>Recurso não encontrado (evento, inscrição, usuário inexistente).</p>
+        </div>
+        <div class="card" style="border-color:#f9e2af33;">
+          <h3 style="color:var(--yellow)">409</h3>
+          <p>Regra de negócio violada: participante tentando criar evento, cancelamento dentro das 2h, etc.</p>
+        </div>
+        <div class="card" style="border-color:#f38ba833;">
+          <h3 style="color:var(--red)">400</h3>
+          <p>Dados inválidos na requisição (validação de campos).</p>
+        </div>
+        <div class="card" style="border-color:var(--border);opacity:.6;">
+          <h3 style="color:var(--muted)">500</h3>
+          <p>Erro interno. Geralmente indica problema no banco ou configuração.</p>
+        </div>
+      </div>
+
+      <!-- ER Diagram -->
+      <div class="section-title">Diagrama de Entidades (ER)</div>
+      <div class="card" style="overflow-x:auto;padding:24px;">
+        <svg width="860" height="360" viewBox="0 0 860 360" fill="none" xmlns="http://www.w3.org/2000/svg" style="min-width:700px;display:block;margin:0 auto;">
+
+          <!-- Usuario -->
+          <rect x="10" y="80" width="160" height="200" rx="8" fill="#24243a" stroke="#313153" stroke-width="1.5"/>
+          <rect x="10" y="80" width="160" height="30" rx="8" fill="#181825"/>
+          <rect x="10" y="100" width="160" height="10" rx="0" fill="#181825"/>
+          <text x="90" y="100" text-anchor="middle" fill="#cdd6f4" font-size="12" font-weight="700" font-family="Inter">Usuario</text>
+          <line x1="10" y1="110" x2="170" y2="110" stroke="#313153" stroke-width="1"/>
+          <text x="20" y="127" fill="#f9e2af" font-size="10" font-family="Fira Code">🔑 id</text><text x="120" y="127" fill="#6c7086" font-size="9" font-family="Fira Code">Long</text>
+          <line x1="10" y1="133" x2="170" y2="133" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="148" fill="#cdd6f4" font-size="10" font-family="Fira Code">nome</text><text x="120" y="148" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="10" y1="154" x2="170" y2="154" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="169" fill="#cdd6f4" font-size="10" font-family="Fira Code">email</text><text x="120" y="169" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="10" y1="175" x2="170" y2="175" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="190" fill="#cdd6f4" font-size="10" font-family="Fira Code">cpf</text><text x="120" y="190" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="10" y1="196" x2="170" y2="196" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="211" fill="#cdd6f4" font-size="10" font-family="Fira Code">telefone</text><text x="120" y="211" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="10" y1="217" x2="170" y2="217" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="232" fill="#cdd6f4" font-size="10" font-family="Fira Code">senhaHash</text><text x="120" y="232" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="10" y1="238" x2="170" y2="238" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="253" fill="#cdd6f4" font-size="10" font-family="Fira Code">tipo</text><text x="120" y="253" fill="#6c7086" font-size="9" font-family="Fira Code">Enum</text>
+          <line x1="10" y1="259" x2="170" y2="259" stroke="#2a2a45" stroke-width="1"/>
+          <text x="20" y="274" fill="#cdd6f4" font-size="10" font-family="Fira Code">criadoEm</text><text x="120" y="274" fill="#6c7086" font-size="9" font-family="Fira Code">LocalDT</text>
+
+          <!-- Evento -->
+          <rect x="220" y="40" width="165" height="210" rx="8" fill="#24243a" stroke="#313153" stroke-width="1.5"/>
+          <rect x="220" y="40" width="165" height="30" rx="8" fill="#181825"/>
+          <rect x="220" y="60" width="165" height="10" rx="0" fill="#181825"/>
+          <text x="302" y="60" text-anchor="middle" fill="#cdd6f4" font-size="12" font-weight="700" font-family="Inter">Evento</text>
+          <line x1="220" y1="70" x2="385" y2="70" stroke="#313153" stroke-width="1"/>
+          <text x="230" y="87" fill="#f9e2af" font-size="10" font-family="Fira Code">🔑 id</text><text x="330" y="87" fill="#6c7086" font-size="9" font-family="Fira Code">Long</text>
+          <line x1="220" y1="93" x2="385" y2="93" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="108" fill="#cba6f7" font-size="10" font-family="Fira Code">🔗 organizador</text><text x="330" y="108" fill="#6c7086" font-size="9" font-family="Fira Code">Usuario</text>
+          <line x1="220" y1="114" x2="385" y2="114" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="129" fill="#cdd6f4" font-size="10" font-family="Fira Code">titulo</text><text x="330" y="129" fill="#6c7086" font-size="9" font-family="Fira Code">String</text>
+          <line x1="220" y1="135" x2="385" y2="135" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="150" fill="#cdd6f4" font-size="10" font-family="Fira Code">descricao</text><text x="330" y="150" fill="#6c7086" font-size="9" font-family="Fira Code">String?</text>
+          <line x1="220" y1="156" x2="385" y2="156" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="171" fill="#cdd6f4" font-size="10" font-family="Fira Code">dataEvento</text><text x="330" y="171" fill="#6c7086" font-size="9" font-family="Fira Code">LocalDT</text>
+          <line x1="220" y1="177" x2="385" y2="177" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="192" fill="#cdd6f4" font-size="10" font-family="Fira Code">vagasTotais</text><text x="330" y="192" fill="#6c7086" font-size="9" font-family="Fira Code">int</text>
+          <line x1="220" y1="198" x2="385" y2="198" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="213" fill="#cdd6f4" font-size="10" font-family="Fira Code">vagasOcupadas</text><text x="330" y="213" fill="#6c7086" font-size="9" font-family="Fira Code">int</text>
+          <line x1="220" y1="219" x2="385" y2="219" stroke="#2a2a45" stroke-width="1"/>
+          <text x="230" y="234" fill="#cdd6f4" font-size="10" font-family="Fira Code">status</text><text x="330" y="234" fill="#6c7086" font-size="9" font-family="Fira Code">Enum</text>
+
+          <!-- Inscricao -->
+          <rect x="440" y="80" width="175" height="200" rx="8" fill="#24243a" stroke="#313153" stroke-width="1.5"/>
+          <rect x="440" y="80" width="175" height="30" rx="8" fill="#181825"/>
+          <rect x="440" y="100" width="175" height="10" rx="0" fill="#181825"/>
+          <text x="527" y="100" text-anchor="middle" fill="#cdd6f4" font-size="12" font-weight="700" font-family="Inter">Inscricao</text>
+          <line x1="440" y1="110" x2="615" y2="110" stroke="#313153" stroke-width="1"/>
+          <text x="450" y="127" fill="#f9e2af" font-size="10" font-family="Fira Code">🔑 id</text><text x="555" y="127" fill="#6c7086" font-size="9" font-family="Fira Code">Long</text>
+          <line x1="440" y1="133" x2="615" y2="133" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="148" fill="#cba6f7" font-size="10" font-family="Fira Code">🔗 responsavel</text><text x="555" y="148" fill="#6c7086" font-size="9" font-family="Fira Code">Usuario</text>
+          <line x1="440" y1="154" x2="615" y2="154" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="169" fill="#cba6f7" font-size="10" font-family="Fira Code">🔗 evento</text><text x="555" y="169" fill="#6c7086" font-size="9" font-family="Fira Code">Evento</text>
+          <line x1="440" y1="175" x2="615" y2="175" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="190" fill="#cdd6f4" font-size="10" font-family="Fira Code">nomeParticipante</text>
+          <line x1="440" y1="196" x2="615" y2="196" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="211" fill="#cdd6f4" font-size="10" font-family="Fira Code">cpfParticipante</text>
+          <line x1="440" y1="217" x2="615" y2="217" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="232" fill="#cdd6f4" font-size="10" font-family="Fira Code">status</text><text x="555" y="232" fill="#6c7086" font-size="9" font-family="Fira Code">Enum</text>
+          <line x1="440" y1="238" x2="615" y2="238" stroke="#2a2a45" stroke-width="1"/>
+          <text x="450" y="253" fill="#cdd6f4" font-size="10" font-family="Fira Code">inscritoEm</text><text x="555" y="253" fill="#6c7086" font-size="9" font-family="Fira Code">LocalDT</text>
+
+          <!-- CriterioPersonalizado -->
+          <rect x="220" y="295" width="190" height="55" rx="8" fill="#24243a" stroke="#313153" stroke-width="1.5"/>
+          <rect x="220" y="295" width="190" height="20" rx="8" fill="#181825"/>
+          <rect x="220" y="305" width="190" height="10" rx="0" fill="#181825"/>
+          <text x="315" y="310" text-anchor="middle" fill="#cdd6f4" font-size="11" font-weight="700" font-family="Inter">CriterioPersonalizado</text>
+          <line x1="220" y1="315" x2="410" y2="315" stroke="#313153" stroke-width="1"/>
+          <text x="230" y="330" fill="#f9e2af" font-size="9" font-family="Fira Code">🔑 id</text>
+          <text x="280" y="330" fill="#cba6f7" font-size="9" font-family="Fira Code">🔗 evento</text>
+          <text x="330" y="330" fill="#cdd6f4" font-size="9" font-family="Fira Code">pergunta</text>
+          <text x="230" y="344" fill="#cdd6f4" font-size="9" font-family="Fira Code">tipo</text>
+          <text x="270" y="344" fill="#cdd6f4" font-size="9" font-family="Fira Code">obrigatorio</text>
+
+          <!-- RespostaCriterio -->
+          <rect x="640" y="220" width="180" height="55" rx="8" fill="#24243a" stroke="#313153" stroke-width="1.5"/>
+          <rect x="640" y="220" width="180" height="20" rx="8" fill="#181825"/>
+          <rect x="640" y="230" width="180" height="10" rx="0" fill="#181825"/>
+          <text x="730" y="235" text-anchor="middle" fill="#cdd6f4" font-size="11" font-weight="700" font-family="Inter">RespostaCriterio</text>
+          <line x1="640" y1="240" x2="820" y2="240" stroke="#313153" stroke-width="1"/>
+          <text x="650" y="255" fill="#f9e2af" font-size="9" font-family="Fira Code">🔑 id</text>
+          <text x="690" y="255" fill="#cba6f7" font-size="9" font-family="Fira Code">🔗 inscricao</text>
+          <text x="760" y="255" fill="#cba6f7" font-size="9" font-family="Fira Code">🔗 criterio</text>
+          <text x="650" y="268" fill="#cdd6f4" font-size="9" font-family="Fira Code">resposta : String</text>
+
+          <!-- Relationships -->
+          <!-- Usuario → Evento (organizador) -->
+          <line x1="170" y1="140" x2="220" y2="108" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="180" y="120" fill="#6c7086" font-size="8">1:N</text>
+
+          <!-- Usuario → Inscricao (responsavel) -->
+          <line x1="170" y1="180" x2="440" y2="148" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+          <!-- Evento → Inscricao -->
+          <line x1="385" y1="145" x2="440" y2="169" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="395" y="148" fill="#6c7086" font-size="8">1:N</text>
+
+          <!-- Evento → CriterioPersonalizado -->
+          <line x1="302" y1="250" x2="302" y2="295" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="306" y="278" fill="#6c7086" font-size="8">1:N</text>
+
+          <!-- Inscricao → RespostaCriterio -->
+          <line x1="615" y1="200" x2="640" y2="240" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="618" y="225" fill="#6c7086" font-size="8">1:N</text>
+
+          <!-- Legend -->
+          <line x1="20" y1="345" x2="50" y2="345" stroke="#cba6f744" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="55" y="349" fill="#6c7086" font-size="9" font-family="Inter">Relacionamento (FK)</text>
+          <rect x="175" y="339" width="10" height="10" rx="2" fill="#f9e2af33" stroke="#f9e2af" stroke-width="1"/>
+          <text x="190" y="349" fill="#6c7086" font-size="9" font-family="Inter">🔑 Chave Primária</text>
+          <rect x="320" y="339" width="10" height="10" rx="2" fill="#cba6f733" stroke="#cba6f7" stroke-width="1"/>
+          <text x="335" y="349" fill="#6c7086" font-size="9" font-family="Inter">🔗 Chave Estrangeira</text>
+        </svg>
+      </div>
+
+      <div class="warn-box">
+        <strong>⚠️ Conexão de banco:</strong> PostgreSQL rodando na porta <code style="font-family:Fira Code;font-size:11px;">15432</code> (não a padrão 5432). Usuário: <code style="font-family:Fira Code;font-size:11px;">postgres</code>, senha: vazia, banco: <code style="font-family:Fira Code;font-size:11px;">inscricao_eventos</code>. Configure <code style="font-family:Fira Code;font-size:11px;">application.properties</code> se necessário.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    el.classList.add('active');
+
+    const titles = {
+      overview: 'Visão Geral',
+      journey: 'Jornada do Usuário',
+      screens: 'Telas',
+      requirements: 'Requisitos',
+      api: 'API & Dados'
+    };
+    document.getElementById('topbar-title').textContent = titles[id] || id;
+    document.querySelector('.main').scrollTop = 0;
+  }
+</script>
+</body>
+</html>

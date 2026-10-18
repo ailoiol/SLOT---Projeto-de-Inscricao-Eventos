@@ -31,6 +31,21 @@ public class EventoController {
             .toList();
     }
 
+    @GetMapping(params = "organizadorId")
+    public List<EventoResponseDTO> listarPorOrganizador(@RequestParam Integer organizadorId) {
+        return eventoRepository.findByOrganizadorId(organizadorId)
+            .stream()
+            .map(EventoResponseDTO::fromEntity)
+            .toList();
+}
+
+    @GetMapping("/{id}")
+    public EventoResponseDTO buscarPorId(@PathVariable Integer id) {
+        Evento evento = eventoRepository.findById(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Evento com id " + id + " não encontrado"));
+        return EventoResponseDTO.fromEntity(evento);
+}
+
     @PostMapping
     public EventoResponseDTO criar(@Valid @RequestBody Evento evento) {
         Usuario organizador = usuarioRepository.findById(evento.getOrganizador().getId())

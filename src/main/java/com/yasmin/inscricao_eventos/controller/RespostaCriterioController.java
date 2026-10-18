@@ -23,6 +23,14 @@ public class RespostaCriterioController {
             .toList();
     }
 
+    @GetMapping(params = "eventoId")
+    public List<RespostaCriterioResponseDTO> listarPorEvento(@RequestParam Integer eventoId) {
+        return respostaCriterioRepository.findByInscricaoEventoId(eventoId)
+            .stream()
+            .map(RespostaCriterioResponseDTO::fromEntity)
+            .toList();
+}
+
     @PostMapping
     public RespostaCriterioResponseDTO criar(@RequestBody RespostaCriterio resposta) {
         RespostaCriterio salva = respostaCriterioRepository.save(resposta);

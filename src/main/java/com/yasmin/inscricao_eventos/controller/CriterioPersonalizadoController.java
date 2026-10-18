@@ -5,6 +5,7 @@ import com.yasmin.inscricao_eventos.model.CriterioPersonalizado;
 import com.yasmin.inscricao_eventos.repository.CriterioPersonalizadoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.yasmin.inscricao_eventos.dto.CriterioPersonalizadoResponseDTO;
 
 import java.util.List;
 
@@ -16,9 +17,20 @@ public class CriterioPersonalizadoController {
     private CriterioPersonalizadoRepository criterioPersonalizadoRepository;
 
     @GetMapping
-    public List<CriterioPersonalizado> listarTodos() {
-        return criterioPersonalizadoRepository.findAll();
-    }
+    public List<CriterioPersonalizadoResponseDTO> listarTodos() {
+        return criterioPersonalizadoRepository.findAll()
+            .stream()
+            .map(CriterioPersonalizadoResponseDTO::fromEntity)
+            .toList();
+}
+
+    @GetMapping(params = "eventoId")
+    public List<CriterioPersonalizadoResponseDTO> listarPorEvento(@RequestParam Integer eventoId) {
+        return criterioPersonalizadoRepository.findByEventoId(eventoId)
+            .stream()
+            .map(CriterioPersonalizadoResponseDTO::fromEntity)
+            .toList();
+}
 
     @PostMapping
     public CriterioPersonalizado criar(@RequestBody CriterioPersonalizado criterioPersonalizado) {

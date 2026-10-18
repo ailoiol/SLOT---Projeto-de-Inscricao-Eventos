@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface RespostaCriterioRepository extends JpaRepository<RespostaCriterio, Integer> {
     List<RespostaCriterio> findByInscricaoId(Integer inscricaoId);
+    List<RespostaCriterio> findByInscricaoEventoId(Integer eventoId);
 }
